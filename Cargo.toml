@@ -1,0 +1,10 @@
+[package]
+name = "dns-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Clap: Parser von Kommandozeilen-Argument
+clap = { version = "4.5.31", features = ["derive"] }
+# Vereinfacht Definieren von benutzerdefinierten Fehler-Datentypen
+thiserror = "2.0.12"
