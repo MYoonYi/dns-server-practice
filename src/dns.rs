@@ -29,3 +29,38 @@ pub struct Header {
     pub nscount: u16, // Anzahl von "resource records" von Namen-Server in "the authority recors section".
     pub arcount: u16, // Anzahl von "resource Record" in zusätzlicher "records" Sektion.
 }
+
+impl Header {
+    const SIZE_OF_HEADER: usize = 12;
+
+    pub fn as_bytes(&self) -> Vec<u8> {
+        // 'with_capacity()' erzeugt einen Vektor mit Kapazität der Größe von ihrem Argument und mit Länge von 0.
+        // - Kapazität heißt, wie vielen Arbeitsspeicher schon allokiert ist und Länge heißt, wie viele Daten schon drin gespeichert sind.
+        let mut data_being_serialized = Vec::with_capacity(Header::SIZE_OF_HEADER);
+        // id mit 16 Bits
+        // `extend_from_slice()`: Da es deutlich geschrieben ist, dass die Methode irgendwann überholt werden wird,
+        // habe ich recherchiert, warum das Tutorial diese Methode überhaupt verwendet.
+        // Es scheint, sie ist für den Typ von Slice optimiert.
+        data_being_serialized.extend_from_slice(&self.id.to_be_bytes());
+        {
+            // qr verarbeiten. Seine Daten soll an größter Bitstelle von einem Byte liegen.
+            let qr = (self.qr as u16) << 15;
+            // Weiter
+            let opcode = (self.opcode as u16) << 11;
+            let aa = (self.aa as u16) << 10;
+            let tc = (self.tc as u16) << 9;
+            let rd = (self.rd as u16) << 8;
+            let ra = (self.ra as u16) << 7;
+            let z = (self.z as u16) << 4;
+            let rcode = self.rcode as u16;
+            let second_block_of_packet = qr | opcode | aa | tc | rd | ra | z | rcode;
+            data_being_serialized.extend_from_slice(&second_block_of_packet.to_be_bytes());
+        }
+        data_being_serialized.extend_from_slice(&self.qdcount.to_be_bytes());
+        data_being_serialized.extend_from_slice(&self.ancount.to_be_bytes());
+        data_being_serialized.extend_from_slice(&self.nscount.to_be_bytes());
+        data_being_serialized.extend_from_slice(&self.arcount.to_be_bytes());
+
+        data_being_serialized
+    }
+}
