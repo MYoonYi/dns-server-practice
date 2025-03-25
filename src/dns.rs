@@ -1,5 +1,7 @@
+use std::error::Error;
+
 // DNS-Header-Struktur ist in ["RFC 1035 - 4.1.1"](https://www.rfc-editor.org/rfc/rfc1035#section-4.1.1) definiert.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Header {
     // Hauptsächliche Rolle der Felder:
     //  1. Kennzeichne Typ der Nachricht.
@@ -62,5 +64,92 @@ impl Header {
         data_being_serialized.extend_from_slice(&self.arcount.to_be_bytes());
 
         data_being_serialized
+    }
+
+    pub fn from_bytes(data: &[u8; 12]) -> Result<Self, Box<dyn Error>> {
+        let parse_bits = |byte, start_position_of_data, lenth_of_data| {
+            let left_shift_for_removing = start_position_of_data - 1;
+            let right_shift_for_right_placing = 7 - (lenth_of_data - 1);
+            (byte << left_shift_for_removing) >> right_shift_for_right_placing
+        };
+        let as_bool = |byte, position_in_the_byte| parse_bits(byte, position_in_the_byte, 1) > 0;
+        let merge_a_pair_of_bytes_in_u16 = |buffer: &mut u16, byte, is_lower_byte| {
+            let data: u16 = if is_lower_byte {
+                byte as u16
+            } else {
+                (byte as u16) << 8
+            };
+            *buffer |= data;
+        };
+
+        let mut data_being_deserialized: Header = Default::default();
+
+        data.iter()
+            .enumerate()
+            .for_each(|(i, &one_byte_of_data)| match i {
+                2 => {
+                    data_being_deserialized.qr = as_bool(one_byte_of_data, 1);
+                    data_being_deserialized.opcode = parse_bits(one_byte_of_data, 2, 4);
+                    data_being_deserialized.aa = as_bool(one_byte_of_data, 6);
+                    data_being_deserialized.tc = as_bool(one_byte_of_data, 7);
+                    data_being_deserialized.rd = as_bool(one_byte_of_data, 8);
+                }
+                3 => {
+                    data_being_deserialized.ra = as_bool(one_byte_of_data, 1);
+                    data_being_deserialized.z = parse_bits(one_byte_of_data, 2, 3);
+                    data_being_deserialized.rcode = parse_bits(one_byte_of_data, 5, 4);
+                }
+                ind if (0..=1).chain(4..=11).any(|nth| ind == nth) => {
+                    let deserializing_buffer = match ind {
+                        0..=1 => &mut data_being_deserialized.id,
+                        4..=5 => &mut data_being_deserialized.qdcount,
+                        6..=7 => &mut data_being_deserialized.ancount,
+                        8..=9 => &mut data_being_deserialized.nscount,
+                        10..=11 => &mut data_being_deserialized.arcount,
+                        _ => panic!("Compiler can't recognize the guard clause. However, this here should never be executed! Something in the implementation is wrong."),
+                    };
+                    let is_lower_byte = (i % 2) == 1;
+                    merge_a_pair_of_bytes_in_u16(
+                        deserializing_buffer,
+                        one_byte_of_data,
+                        is_lower_byte,
+                    );
+                }
+                // 4..=5 => {
+                //     let is_lower_byte = i == 5;
+                //     merge_a_pair_of_bytes_in_u16(
+                //         &mut data_being_deserialized.qdcount,
+                //         one_byte_of_data,
+                //         is_lower_byte,
+                //     );
+                // }
+                // 6..=7 => {
+                //     let is_lower_byte = i == 7;
+                //     merge_a_pair_of_bytes_in_u16(
+                //         &mut data_being_deserialized.ancount,
+                //         one_byte_of_data,
+                //         is_lower_byte,
+                //     );
+                // }
+                // 8..=9 => {
+                //     let is_lower_byte = i == 9;
+                //     merge_a_pair_of_bytes_in_u16(
+                //         &mut data_being_deserialized.nscount,
+                //         one_byte_of_data,
+                //         is_lower_byte,
+                //     );
+                // }
+                // 10..=11 => {
+                //     let is_lower_byte = i == 11;
+                //     merge_a_pair_of_bytes_in_u16(
+                //         &mut data_being_deserialized.arcount,
+                //         one_byte_of_data,
+                //         is_lower_byte,
+                //     );
+                // }
+                _ => panic!("Too much Byte has been recieved."),
+            });
+
+        Ok(data_being_deserialized)
     }
 }
