@@ -1,5 +1,7 @@
 use std::error::Error;
 
+use thiserror::Error;
+
 // DNS-Header-Struktur ist in ["RFC 1035 - 4.1.1"](https://www.rfc-editor.org/rfc/rfc1035#section-4.1.1) definiert.
 #[derive(Debug, Default)]
 pub struct Header {
@@ -66,11 +68,17 @@ impl Header {
         data_being_serialized
     }
 
-    pub fn from_bytes(data: &[u8; 12]) -> Result<Self, Box<dyn Error>> {
+    pub fn from_bytes(data: &[u8]) -> Result<Self, DnsSerdeError> {
+        use DnsSerdeError::*;
+
+        if data.len() < Header::SIZE_OF_HEADER {
+            return Err(DeserializationFailed("Bytes: {data.len():?}".to_string()));
+        }
+
         let parse_bits = |byte, start_position_of_data, lenth_of_data| {
             let left_shift_for_removing = start_position_of_data - 1;
-            let right_shift_for_right_placing = 7 - (lenth_of_data - 1);
-            (byte << left_shift_for_removing) >> right_shift_for_right_placing
+            let right_shift_for_correctly_placing = 7 - (lenth_of_data - 1);
+            (byte << left_shift_for_removing) >> right_shift_for_correctly_placing
         };
         let as_bool = |byte, position_in_the_byte| parse_bits(byte, position_in_the_byte, 1) > 0;
         let merge_a_pair_of_bytes_in_u16 = |buffer: &mut u16, byte, is_lower_byte| {
@@ -82,7 +90,7 @@ impl Header {
             *buffer |= data;
         };
 
-        let mut data_being_deserialized: Header = Default::default();
+        let mut data_being_deserialized = Header::default();
 
         data.iter()
             .enumerate()
@@ -115,41 +123,15 @@ impl Header {
                         is_lower_byte,
                     );
                 }
-                // 4..=5 => {
-                //     let is_lower_byte = i == 5;
-                //     merge_a_pair_of_bytes_in_u16(
-                //         &mut data_being_deserialized.qdcount,
-                //         one_byte_of_data,
-                //         is_lower_byte,
-                //     );
-                // }
-                // 6..=7 => {
-                //     let is_lower_byte = i == 7;
-                //     merge_a_pair_of_bytes_in_u16(
-                //         &mut data_being_deserialized.ancount,
-                //         one_byte_of_data,
-                //         is_lower_byte,
-                //     );
-                // }
-                // 8..=9 => {
-                //     let is_lower_byte = i == 9;
-                //     merge_a_pair_of_bytes_in_u16(
-                //         &mut data_being_deserialized.nscount,
-                //         one_byte_of_data,
-                //         is_lower_byte,
-                //     );
-                // }
-                // 10..=11 => {
-                //     let is_lower_byte = i == 11;
-                //     merge_a_pair_of_bytes_in_u16(
-                //         &mut data_being_deserialized.arcount,
-                //         one_byte_of_data,
-                //         is_lower_byte,
-                //     );
-                // }
                 _ => panic!("Too much Byte has been recieved."),
             });
 
         Ok(data_being_deserialized)
     }
+}
+
+#[derive(Debug, Error)]
+pub enum DnsSerdeError {
+    #[error("Too few Bytes has been given for being converted into DNS Header")]
+    DeserializationFailed(String),
 }
