@@ -14,6 +14,8 @@ fn main() {
         let (len, addr) = socket
             .recv_from(&mut buf)
             .expect("Couldn't bind to the adress.");
+        // println!("Received {} bytes from {}: {:?}", len, addr, &buf[..len]);
+
         let header = Header::from_bytes(&buf[..len]).expect("Could not parse DNS Header.");
 
         println!("Received query from {} {:?}", addr, header);

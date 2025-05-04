@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, fmt::format};
 
 use thiserror::Error;
 
@@ -72,7 +72,7 @@ impl Header {
         use DnsSerdeError::*;
 
         if data.len() < Header::SIZE_OF_HEADER {
-            return Err(DeserializationFailed("Bytes: {data.len():?}".to_string()));
+            return Err(DeserializationFailed(format!("Bytes too little: {:?}", data.len().to_string())));
         }
 
         let parse_bits = |byte, start_position_of_data, lenth_of_data| {
@@ -116,6 +116,7 @@ impl Header {
                         10..=11 => &mut data_being_deserialized.arcount,
                         _ => panic!("Compiler can't recognize the guard clause. However, this here should never be executed! Something in the implementation is wrong."),
                     };
+                    
                     let is_lower_byte = (i % 2) == 1;
                     merge_a_pair_of_bytes_in_u16(
                         deserializing_buffer,
@@ -123,7 +124,7 @@ impl Header {
                         is_lower_byte,
                     );
                 }
-                _ => panic!("Too much Byte has been recieved."),
+                _ => (),
             });
 
         Ok(data_being_deserialized)
