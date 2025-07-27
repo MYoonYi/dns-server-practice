@@ -2,6 +2,8 @@ use std::net::UdpSocket;
 
 use dns::Header;
 
+use crate::dns::debug_print_bytes;
+
 mod dns;
 
 fn main() {
@@ -19,5 +21,6 @@ fn main() {
         let header = Header::from_bytes(&buf[..len]).expect("Could not parse DNS Header.");
 
         println!("Received query from {} {:?}", addr, header);
+        debug_print_bytes(&buf);
     }
 }

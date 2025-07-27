@@ -136,3 +136,23 @@ pub enum DnsSerdeError {
     #[error("Too few Bytes has been given for being converted into DNS Header")]
     DeserializationFailed(String),
 }
+
+pub fn debug_print_bytes(buf: &[u8]) {
+    println!("Print debugging Info: 16 bytes of buffer");
+
+    for (index, data) in buf.chunks(16).enumerate() {
+        print!("{} - {} bytes: ", (index * 16) + 1, (index * 16) + 16);
+        for byte in data {
+            print!("{:02x} ", byte);
+        }
+        print!(" => ");
+        for byte in data {
+            if *byte >= 32 && *byte <= 126 {
+                print!("{}", *byte as char);
+            } else {
+                print!(".");
+            }
+        }
+        println!();
+    }
+}
