@@ -72,7 +72,10 @@ impl Header {
         use DnsSerdeError::*;
 
         if data.len() < Header::SIZE_OF_HEADER {
-            return Err(DeserializationFailed(format!("Bytes too little: {:?}", data.len().to_string())));
+            return Err(DeserializationFailed(format!(
+                "Bytes too little: {:?}",
+                data.len().to_string()
+            )));
         }
 
         let parse_bits = |byte, start_position_of_data, lenth_of_data| {
@@ -116,7 +119,7 @@ impl Header {
                         10..=11 => &mut data_being_deserialized.arcount,
                         _ => panic!("Compiler can't recognize the guard clause. However, this here should never be executed! Something in the implementation is wrong."),
                     };
-                    
+         
                     let is_lower_byte = (i % 2) == 1;
                     merge_a_pair_of_bytes_in_u16(
                         deserializing_buffer,
@@ -155,4 +158,48 @@ pub fn debug_print_bytes(buf: &[u8]) {
         }
         println!();
     }
+}
+
+pub struct Question {
+    pub name: Vec<Label>,
+    pub qtype: Type,
+    pub qclass: Class,
+}
+
+#[derive(Debug, Clone)]
+pub struct Label(String);
+
+#[derive(Debug, Clone)]
+pub enum Type {
+    // Resource Record Types and QTYPES
+    A = 1,      // a host address
+    NS = 2,     // an authoritative name server
+    MD = 3,     // a mail destination (Obsolete - use MX)
+    MF = 4,     // a mail forwarder (Obsolete - use MX)
+    CNAME = 5,  // the canonical name for an alias
+    SOA = 6,    // marks the start ofa zone of authority
+    MB = 7,     // a mailbox domain name (EXPERIMENTAL)
+    MG = 8,     // a mail group member (EXPERIMENTAL)
+    MR = 9,     // a mail rename domain name (EXPERIMENTAL)
+    NULL = 10,  // a null RR (EXPERIMENTAL)
+    WKS = 11,   // a well known service description
+    PTR = 12,   // a domain name pointer
+    HINFO = 13, // host information
+    MINFO = 14, // mailbox or mail list information
+    MX = 15,    // mail exchange
+    TXT = 16,   // text strings
+
+    // Below are only QTYPES
+    AXFR = 252,  // A request for a transfer of an entire zone
+    MAILB = 253, // A request for mailbox-related records (MB, MG or MR)
+    MAILA = 254, // A request for mail agent RRs (Obsolete - see MX)
+    _ALL_ = 255, // A request for all records
+}
+
+#[derive(Debug, Clone)]
+pub enum Class {
+    IN = 1, // the Internet
+    CS = 2, // the CSNET class (Obsolete - used only for examples in some obsolete RFCs)
+    CH = 3, // the CHAOS class
+    HS = 4, // HESIOD [Dyer 87]
 }
